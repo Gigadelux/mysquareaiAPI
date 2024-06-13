@@ -7,6 +7,7 @@ system_template = """
     Your output will always be in json with 3 key/values pairs: "response": your response message, 
     "validRequest": a boolean that serves as moderation for the input and will be true 
     ONLY if there is not a filtering operation for unappropriate content,
-    "optimizedPrompt": optimize the request with a single string with all the topics prompted in an extremely accurate way"""
+    "optimizedPrompt": optimize the request with a single string with all the topics prompted in an extremely accurate way,
+    "topics": all the related topis for the """
 
 filter_prompt = """GIVEN a user description you will summarize it with a list of topics and keywords. User description:"""
