@@ -7,7 +7,7 @@ from promptTemplates import system_template, filter_prompt
 import google.generativeai as genai
 from dotenv import load_dotenv
 import os
-from apiKeyAnalyzer import ApiKeyAnalyzer
+from apiKeyManager import ApiKeyManager
 import uvicorn
 from weaviate.classes.query import MetadataQuery
 
@@ -19,7 +19,7 @@ async def getPeople(prompt: str = Query(None, description="prompt for searching 
     # Security.is_banned_IP(metaData["ip"])
     # Security.auth_user_key(metaData["userkey"]) #get api key, the apikey will be banned or not, and indicates the type, if user or not, and the premium or basic plan
     #substitute with key analizer
-    analyzer = ApiKeyAnalyzer(apiKey=apikey)
+    analyzer = ApiKeyManager(apiKey=apikey)
     if(not analyzer.isKeyValid()):
         return json.encoder.JSONEncoder().encode(
             {
@@ -49,8 +49,8 @@ async def getPeople(prompt: str = Query(None, description="prompt for searching 
             return_metadata= MetadataQuery(distance=True,score=True,certainty=True)
         )
         return json.encoder.JSONEncoder().encode(
-            {
-                "users":str([{"uuid": x.uuid, "user": str(x.properties.get("name")), "description": str(x.properties.get("description")), "score": str(x.metadata.certainty)} for x in vector_response.objects]),
+            {   #TODO add user id (from firebase id documents)
+                "users":str([{"uuid": x.uuid, "user": str(x.properties.get("name")), "job_title": str(x.properties.get("job_title")), "profile_img": str(x.properties.get("profile_img")), "score": str(x.metadata.certainty)} for x in vector_response.objects]),
                 "error": "null",
                 "bot_response": botJSON
             }
@@ -67,7 +67,7 @@ async def getPeople(prompt: str = Query(None, description="prompt for searching 
     
 @app.post("/delete_user/")
 async def delete_user(uuid:str=Query(None), apiKey:str=Query(None)):
-    analyzer = ApiKeyAnalyzer(apiKey=apiKey)
+    analyzer = ApiKeyManager(apiKey=apiKey)
     if(not analyzer.isKeyValid()):
         return json.encoder.JSONEncoder().encode(
                 {
@@ -89,8 +89,8 @@ async def delete_user(uuid:str=Query(None), apiKey:str=Query(None)):
 
 
 @app.post("/upload_user/")
-async def upload_user(name:str = Query(None), description:str = Query(None), apiKey:str = Query(None)):
-    analyzer = ApiKeyAnalyzer(apiKey=apiKey)
+async def upload_user(name:str = Query(None), description:str = Query(None), email:str = Query(None), apiKey:str = Query(None)): #Manage in secret manager
+    analyzer = ApiKeyManager(apiKey=apiKey)
     if(not analyzer.isKeyValid()):
         return json.encoder.JSONEncoder().encode(
                 {
@@ -118,7 +118,13 @@ async def upload_user(name:str = Query(None), description:str = Query(None), api
             uuid = collection.data.insert(
                     properties={
                         "name": name,
-                        "description": description
+                        "description": description,
+                        "profileImg":"",
+                        "email": email,
+                        "jobTitle": "",
+                        "premiumUser":False,
+                        "interests":[],
+                        "links":[]
                     },
                     vector=vector
             )
@@ -135,14 +141,32 @@ async def upload_user(name:str = Query(None), description:str = Query(None), api
                     "error": "error uploading user",
                 }
             )
-    return json.encoder.JSONEncoder().encode(
+    # return json.encoder.JSONEncoder().encode(
+    #             {
+    #                 "error": "content blocked, reason: prompt contains content filtered",
+    #                 "botResponse":botJSON,
+    #                 "isValid": botJSON["isValid"]
+    #             }
+    #         )
+@app.get("/get_user/")
+async def get_user(id:str = Query(None), apiKey:str = Query(None)):
+    analyzer = ApiKeyManager(apiKey=apiKey)
+    if(not analyzer.isKeyValid()):
+        return json.encoder.JSONEncoder().encode(
                 {
-                    "error": "content blocked, reason: prompt contains content filtered",
-                    "botResponse":botJSON,
-                    "isValid": botJSON["isValid"]
+                    "error": "Api Key invalid",
                 }
             )
-    
+    client = weaviate.connect_to_local()
+    collection = client.collections.get("users")
+    user_data = collection.query.fetch_object_by_id(id)
+    return json.encoder.JSONEncoder().encode(
+                {   
+                    "propreties": user_data.properties,
+                }
+            )
+        
+
 @app.get("/test/")
 async def test(name:str = Query(None)):
     return json.encoder.JSONEncoder().encode(
