@@ -7,9 +7,10 @@ from promptTemplates import system_template, filter_prompt
 import google.generativeai as genai
 from dotenv import load_dotenv
 import os
-from apiKeyManager import ApiKeyManager
+from helpers.apiKeyManager import ApiKeyManager, generateApiKey
 import uvicorn
 from weaviate.classes.query import MetadataQuery
+from helpers.firebase_helper import firebase_helper
 
 app = FastAPI()
 handler = Mangum(app)
@@ -78,8 +79,8 @@ async def getPeople(prompt: str = Query(None, description="prompt for searching 
     
     
 @app.post("/delete_user/")
-async def delete_user(uuid:str=Query(None), apiKey:str=Query(None)):
-    analyzer = ApiKeyManager(apiKey=apiKey)
+async def delete_user(uuid:str=Query(None), apiKey:str=Query(None), secret_id:str= Query(None)):
+    analyzer = ApiKeyManager(apiKey=apiKey, secret_id=secret_id)
     if(not analyzer.isKeyValid()):
         return json.encoder.JSONEncoder().encode(
                 {
@@ -101,58 +102,56 @@ async def delete_user(uuid:str=Query(None), apiKey:str=Query(None)):
 
 
 @app.post("/upload_user/")
-async def upload_user(name:str = Query(None), description:str = Query(None), email:str = Query(None), apiKey:str = Query(None)): #Manage in secret manager
-    analyzer = ApiKeyManager(apiKey=apiKey)
-    if(not analyzer.isKeyValid()):
-        return json.encoder.JSONEncoder().encode(
-                {
-                    "error": "Api Key invalid",
-                }
-            )
-    client = weaviate.connect_to_local()  # Connect with default parameters
+async def upload_user(name:str = Query(None), description:str = Query(None), email:str = Query(None)): #Manage in secret manager
+    firebase_help = firebase_helper()
+    ##########TODO manage errors better
+    try:
+        apiKey = generateApiKey()
+        keyManager = ApiKeyManager(apiKey=apiKey)
+        encryptedKey = keyManager.encryptedKey()
+        firebase_help.upload_firstKey(email=email, apiKey=encryptedKey)
+    except:
+        return ({"error":"error authentication user key"})
+    client = await weaviate.connect_to_local()  # Connect with default parameters
     if(not client.is_ready()):
         return str({"error":"error server response"})
     load_dotenv()
     genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-    llm = genai.GenerativeModel(model_name="models/gemini-1.0-pro")
-    genai.GenerationConfig(max_output_tokens=100, response_mime_type="application/json") #change with apikey setter, new class called configmodel
     embedder = genai.get_model("models/text-embedding-004")
-    botResponse = llm.generate_content(filter_prompt+" User{"+name+description+"}")
-    botJsonRaw = botResponse.text.replace("json","",1).replace("'","").replace("\n","").replace("```","").replace("'","")
-    botJSON = json.loads(botJsonRaw)
-    if(True): #TODO fix this
-        vector = genai.embed_content(
-            model=embedder,
-            content=description, 
-        )["embedding"]
-        collection = client.collections.get("users")
-        try:
-            uuid = collection.data.insert(
-                    properties={
-                        "name": name,
-                        "description": description,
-                        "profileImg":"",
-                        "email": email,
-                        "jobTitle": "",
-                        "premiumUser":False,
-                        "interests":[],
-                        "links":[]
-                    },
-                    vector=vector
-            )
-            return json.encoder.JSONEncoder().encode(
-                {
-                    "SUCCESS": "request successful",
-                    "vector": str(vector[0:10])+"...",
-                    "botjson" : json.encoder.JSONEncoder().encode(botJSON)
-                }
-            )
-        except:
-            return json.encoder.JSONEncoder().encode(
-                {
-                    "error": "error uploading user",
-                }
-            )
+    vector = genai.embed_content(
+        model=embedder,
+        content=description, 
+    )["embedding"]
+    collection = client.collections.get("users")
+    try:
+        uuid = collection.data.insert(
+                properties={
+                    "name": name,
+                    "description": description,
+                    "profileImg":"",
+                    "email": email,
+                    "jobTitle": "",
+                    "premiumUser":False,
+                    "interests":[],
+                    "links":[]
+                },
+                vector=vector
+        )
+        firebase_help.upload_user(email=email, uuid=uuid, apiKey_encrypted=encryptedKey)
+        return json.encoder.JSONEncoder().encode(
+            {
+                "SUCCESS": "request successful",
+                "vector": str(vector[0:10])+"...",
+                "apiKey": apiKey, #TODO ADD LOGIN SECURE FUNCTION, add client apikeyloginRetrievalError and local store
+                "uuid":uuid
+            }
+        )
+    except:
+        return json.encoder.JSONEncoder().encode(
+            {
+                "error": "error uploading user",
+            }
+        )
     # return json.encoder.JSONEncoder().encode(
     #             {
     #                 "error": "content blocked, reason: prompt contains content filtered",
@@ -161,8 +160,8 @@ async def upload_user(name:str = Query(None), description:str = Query(None), ema
     #             }
     #         )
 @app.get("/get_user/")
-async def get_user(id:str = Query(None), apiKey:str = Query(None)):
-    analyzer = ApiKeyManager(apiKey=apiKey)
+async def get_user(id:str = Query(None), apiKey:str = Query(None), secret_id:str = Query(None)):
+    analyzer = ApiKeyManager(apiKey=apiKey, secret_id=secret_id)
     if(not analyzer.isKeyValid()):
         return json.encoder.JSONEncoder().encode(
                 {
