@@ -1,0 +1,165 @@
+# README.md
+
+## API Documentation
+
+### Overview
+
+Welcome to the API documentation for our FastAPI application! This application provides several endpoints to manage user data, interact with Weaviate for vector-based searches, and use Google Generative AI for generating and embedding content. This document will guide you through the available endpoints and how to interact with them.
+
+### Table of Contents
+
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Running the Server](#running-the-server)
+- [API Endpoints](#api-endpoints)
+  - [GET /get_people/](#get-get_people)
+  - [POST /delete_user/](#post-delete_user)
+  - [POST /upload_user/](#post-upload_user)
+  - [GET /test/](#get-test)
+- [Configuration](#configuration)
+- [Error Handling](#error-handling)
+
+### Getting Started
+
+#### Prerequisites
+
+Before you start, ensure you have the following installed:
+
+- Python 3.8+
+- `pip` (Python package installer)
+- An instance of Weaviate running locally
+- A valid Google API key for Generative AI
+
+#### Installation
+
+1. Clone the repository:
+
+    ```sh
+    git clone <repository-url>
+    cd <repository-directory>
+    ```
+
+2. Install the required Python packages:
+
+    ```sh
+    pip install -r requirements.txt
+    ```
+
+3. Create a `.env` file in the root directory and add your Google API key:
+
+    ```env
+    GOOGLE_API_KEY=your_google_api_key_here
+    ```
+
+#### Running the Server
+
+To run the server, use the following command:
+
+```sh
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+### API Endpoints
+
+#### GET /get_people/
+
+Retrieve a list of users similar to the provided prompt.
+
+**Query Parameters:**
+
+- `prompt` (str, optional): The prompt for searching people similar to you.
+- `apikey` (str, required): The API key for authentication.
+
+**Response:**
+
+- `200 OK` on success with a JSON body containing user data.
+- `400 Bad Request` if the API key is invalid or the server is not ready.
+
+**Example:**
+
+```sh
+curl -X GET "http://localhost:8000/get_people/?prompt=example&apikey=your_api_key"
+```
+
+#### POST /delete_user/
+
+Delete a user by UUID.
+
+**Query Parameters:**
+
+- `uuid` (str, required): The UUID of the user to delete.
+- `apiKey` (str, required): The API key for authentication.
+
+**Response:**
+
+- `200 OK` on successful deletion.
+- `400 Bad Request` if the API key is invalid or the user could not be deleted.
+
+**Example:**
+
+```sh
+curl -X POST "http://localhost:8000/delete_user/?uuid=user_uuid&apiKey=your_api_key"
+```
+
+#### POST /upload_user/
+
+Upload a new user with a name and description.
+
+**Query Parameters:**
+
+- `name` (str, required): The name of the user.
+- `description` (str, required): The description of the user.
+- `apiKey` (str, required): The API key for authentication.
+
+**Response:**
+
+- `200 OK` on successful upload.
+- `400 Bad Request` if the API key is invalid or there was an error uploading the user.
+
+**Example:**
+
+```sh
+curl -X POST "http://localhost:8000/upload_user/?name=JohnDoe&description=SampleDescription&apiKey=your_api_key"
+```
+
+#### GET /test/
+
+A simple test endpoint to check if the server is running.
+
+**Query Parameters:**
+
+- `name` (str, optional): A name to include in the greeting message.
+
+**Response:**
+
+- `200 OK` with a greeting message.
+
+**Example:**
+
+```sh
+curl -X GET "http://localhost:8000/test/?name=John"
+```
+
+### Configuration
+
+The application uses environment variables for configuration. Create a `.env` file in the root directory and set the following variables:
+
+```env
+GOOGLE_API_KEY=your_google_api_key_here
+```
+
+### Error Handling
+
+The API includes basic error handling with appropriate status codes and messages:
+
+- `400 Bad Request`: Invalid API key or invalid request parameters.
+- `500 Internal Server Error`: Issues connecting to Weaviate or processing requests.
+
+### Additional Notes
+
+- Ensure Weaviate is running locally before starting the server.
+- Handle sensitive data such as API keys with care and do not expose them publicly.
+- Use the provided endpoints responsibly, adhering to rate limits and data privacy guidelines.
+
+Feel free to reach out if you have any questions or need further assistance with the API. Happy coding!
