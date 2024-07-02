@@ -1,5 +1,6 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Query
 from mangum import Mangum
+from pydantic import BaseModel
 import weaviate
 import weaviate.classes.config as wvcc
 import json
@@ -11,7 +12,9 @@ from helpers.apiKeyManager import ApiKeyManager, generateApiKey
 import uvicorn
 from weaviate.classes.query import MetadataQuery
 from helpers.firebase_helper import firebase_helper
-
+from firebase_admin import auth, credentials, initialize_app
+import firebase_admin
+##TODO mettere un limite alle chiamate giornaliere nella versione premium e in quella normale (evitare l'abuso in caso di attacco)
 app = FastAPI()
 handler = Mangum(app)
 
@@ -185,6 +188,41 @@ async def test(name:str = Query(None)):
                     "Greetings": "Hello my man!! Hello "+name,
                 }
             )
+
+#FIREBASE TODO more fuckin elegant!!!!!! NOT MONOLITIC ECHECAZZO
+'''
+ATTENZIONE!!!!!!!!!!! 
+nel client la fottuta registrazione sarà in contemporanea tra 
+l'autenticazione su firebase e l'autenticazione per l'upload utente 
+al momento della registrazione.
+in caso di errore SI FA IL LOGOUT DAL CLIENT
+'''
+    
+class UserCredentials(BaseModel):
+    email: str
+    password: str
+
+# Endpoint to verify user credentials
+@app.post("/verify_user/")
+async def verify_user_credentials(credentials: UserCredentials):
+    try:
+        # Verify user credentials using Firebase Authentication
+        user = auth.get_user_by_email(credentials.email)
+        cred = credentials.Certificate('path/to/serviceAccountKey.json')
+        firebase_admin.initialize_app(cred)
+        # Sign in with email and password to verify credentials
+        auth.verify_password(credentials.email, credentials.password)
+        
+        # If no exception is thrown, credentials are valid
+        return {"message": "Credentials verified successfully"}
+    
+    except auth.AuthError as e:
+        # Handle authentication errors (e.g., invalid credentials)
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    except firebase_admin.exceptions.FirebaseError as e:
+        # Handle Firebase SDK errors
+        raise HTTPException(status_code=500, detail="Firebase error")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
