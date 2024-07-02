@@ -50,7 +50,19 @@ async def getPeople(prompt: str = Query(None, description="prompt for searching 
         )
         return json.encoder.JSONEncoder().encode(
             {   #TODO add user id (from firebase id documents)
-                "users":str([{"uuid": x.uuid, "user": str(x.properties.get("name")), "job_title": str(x.properties.get("job_title")), "profile_img": str(x.properties.get("profile_img")), "score": str(x.metadata.certainty)} for x in vector_response.objects]),
+                "users":str([
+                    {
+                        "uuid": x.uuid,
+                        "user": str(x.properties.get("name")),
+                        "job_title": str(x.properties.get("job_title")),
+                        "profile_img": str(x.properties.get("profile_img")),
+                        "description": str(x.properties.get("description")),
+                        "premiumUser": str(x.properties.get("premiumUser")),
+                        "interests": str(x.properties.get("interests")),
+                        "links": str(x.properties.get("links")),
+                        "score": str(x.metadata.certainty)
+                        } 
+                    for x in vector_response.objects]),
                 "error": "null",
                 "bot_response": botJSON
             }
