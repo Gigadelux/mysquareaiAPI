@@ -19,4 +19,4 @@
 /prova.sh
 /.azure
 /.aws
-/.env
+.env
