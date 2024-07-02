@@ -1,5 +1,5 @@
 from google.cloud import firestore
-class firebase_helper():
+class firebase_helper():#TODO make a function that checks if the uuid of user is not null for login function in the api in case of errors
     def __init__(self):
         self.db = firestore.Client(
             project=None,
