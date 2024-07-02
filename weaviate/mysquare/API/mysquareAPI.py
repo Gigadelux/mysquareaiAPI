@@ -101,7 +101,7 @@ async def delete_user(uuid:str=Query(None), apiKey:str=Query(None), secret_id:st
 
 
 
-@app.post("/upload_user/")
+@app.post("/upload_user/") #TODO this will be implemented in the client and then it will be invoked ONLY if the user has done the authentication
 async def upload_user(name:str = Query(None), description:str = Query(None), email:str = Query(None)): #Manage in secret manager
     firebase_help = firebase_helper()
     ##########TODO manage errors better
@@ -109,7 +109,7 @@ async def upload_user(name:str = Query(None), description:str = Query(None), ema
         apiKey = generateApiKey()
         keyManager = ApiKeyManager(apiKey=apiKey)
         encryptedKey = keyManager.encryptedKey()
-        firebase_help.upload_firstKey(email=email, apiKey=encryptedKey)
+        firebase_help.upload_firstKey(email=email, apiKey=encryptedKey) #TODO uncomment
     except:
         return ({"error":"error authentication user key"})
     client = await weaviate.connect_to_local()  # Connect with default parameters
@@ -161,7 +161,7 @@ async def upload_user(name:str = Query(None), description:str = Query(None), ema
     #         )
 @app.get("/get_user/")
 async def get_user(id:str = Query(None), apiKey:str = Query(None), secret_id:str = Query(None)):
-    analyzer = ApiKeyManager(apiKey=apiKey, secret_id=secret_id)
+    analyzer = ApiKeyManager(apiKey=apiKey)
     if(not analyzer.isKeyValid()):
         return json.encoder.JSONEncoder().encode(
                 {

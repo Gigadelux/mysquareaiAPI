@@ -5,15 +5,14 @@ import os
 import time
 import random
 import string
-from secretManagerService_helper import SecretManagerService_Helper
-from firebase_helper import firebase_helper
+from helpers.secretManagerService_helper import SecretManagerService_Helper
+from helpers.firebase_helper import firebase_helper
 from cryptography.fernet import Fernet
 '''!IMPORTANT to manage the keys and verify them I will put only the encryption key in the secretManager, and it will change from user email'''
 class ApiKeyManager():
     apiKey = ""
-    def __init__(self, apiKey, secret_id):#add project_id and secret_id
+    def __init__(self, apiKey):#add project_id and secret_id
         self.apiKey = apiKey
-        self.secret_id = secret_id
     def isKeyValid(self):
         self.apiKey
         return True
@@ -22,7 +21,7 @@ class ApiKeyManager():
     def encryptedKey(self)->str:
         load_dotenv()
         secret_id = os.getenv("APIS_ENCRYPTION_KEY")
-        payload = SecretManagerService_Helper().access_secret_version(secret_id=secret_id, secret_version="latest")
+        payload = SecretManagerService_Helper().access_secret_version()
         fernet = Fernet(key=payload.encode())
         encryptedKey = fernet.encrypt(self.apiKey)
         return encryptedKey.decode()

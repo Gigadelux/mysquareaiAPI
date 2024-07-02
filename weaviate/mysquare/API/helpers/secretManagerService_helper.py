@@ -4,7 +4,7 @@ import os
 class SecretManagerService_Helper():
     def __init__(self):
         pass
-    def access_secret_version(self, secret_id, secret_version):
+    def access_secret_version(self,ì):
         secretManager = SecretManagerServiceClient()
         load_dotenv()
         project_id = os.getenv("GOOGLE_CLOUD_PROJECT_ID")
