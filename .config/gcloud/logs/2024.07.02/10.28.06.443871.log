@@ -179,3 +179,8 @@
 2024-07-02 10:28:32,284 DEBUG    root            Chosen display Format:table[no-heading,margin=6,width=80]([0]:label='':align=left:width=22,[1]:label='':align=left:wrap)
 2024-07-02 10:28:32,285 DEBUG    root            Chosen display Format:table[no-heading,margin=6,width=80]([0]:label='':align=left:width=22,[1]:label='':align=left:wrap)
 2024-07-02 10:28:32,285 DEBUG    root            Chosen display Format:table[no-heading,margin=6,width=80]([0]:label='':align=left:width=22,[1]:label='':align=left:wrap)
+2024-07-02 10:33:58,463 INFO     ___FILE_ONLY___ 
+
+Command killed by keyboard interrupt
+
+
