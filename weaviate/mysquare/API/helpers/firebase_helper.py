@@ -15,9 +15,11 @@ class firebase_helper():
         self.db.collection("users").document(doc[0].id).update({"people_search":doc[0].to_dict()["people_search"]+people})
 
 '''
+    RULES/BOZZA:
     WARNING: the firebase rules will be the following:
-        IF user is authenticated the user can only write in his document, can read everyone else BUT he cannot read the api
-        THE BACKEND is god and can access/read/write anywhere
+        IF user is authenticated the user can only write in his document (not premiumUser and apiKey those are READONLY), 
+            can read everyone else BUT he cannot read everybody else apiKey
+        ELSE IF THE BACKEND is god and can access/read/write anywhere
     IN ADDITION:
         The clear_api_keys collection will be clear (only the database can access that) and through the encrypted key will be verified
 '''
