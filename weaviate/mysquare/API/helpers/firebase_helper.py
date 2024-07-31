@@ -6,13 +6,12 @@ class firebase_helper():#TODO make a function that checks if the uuid of user is
             credentials=None,
             database=None
         )
-    def upload_user(self, email, uuid, name, apiKey_encrypted):
+    def upload_user(self, email, uuid, name, apiKey_encrypted): #TODO users sign up starts here
         self.db.collection("users").add({"uuid":uuid,"email":email, "name":name, "apiKey":apiKey_encrypted})
     def upload_firstKey(self, email, apiKey):
         self.db.collection("clear_api_keys").add({"user":email, "apiKey":apiKey})
-    def updateHistory(self, people:list[str], email):
-        doc = self.db.collection("users").where("email", "==", email).limit(1).get()
-        self.db.collection("users").document(doc[0].id).update({"people_search":doc[0].to_dict()["people_search"]+people})
+    def updateHistory(self, prompt:str, id:str):
+        self.db.collection("users").document(id).collection("history").add({"prompt":prompt, "dateTime": firestore.SERVER_TIMESTAMP})
 
 '''
     RULES/BOZZA:

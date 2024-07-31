@@ -15,6 +15,7 @@ from helpers.firebase_helper import firebase_helper
 from firebase_admin import auth, credentials, initialize_app
 import firebase_admin
 ##TODO mettere un limite alle chiamate giornaliere nella versione premium e in quella normale (evitare l'abuso in caso di attacco)
+#TODO sobstitute {error} with HTTPEXCEPTION
 app = FastAPI()
 handler = Mangum(app)
 
@@ -68,7 +69,7 @@ async def getPeople(prompt: str = Query(None, description="prompt for searching 
                         } 
                     for x in vector_response.objects]),
                 "error": "null",
-                "bot_response": botJSON
+                "bot_response": botJSON,
             }
         )
     return json.encoder.JSONEncoder().encode(
@@ -180,6 +181,13 @@ async def get_user(id:str = Query(None), apiKey:str = Query(None), secret_id:str
                 }
             )
         
+@app.post("/update_user/")
+async def update_user(id:str = Query(), apiKey:str = Query(), data:str = Query()):
+    pass
+
+@app.post("/update_interests/")
+async def update_interests(id:str = Query(), apiKey:str = Query(), interests:list = Query()):
+    pass
 
 @app.get("/test/")
 async def test(name:str = Query(None)):
