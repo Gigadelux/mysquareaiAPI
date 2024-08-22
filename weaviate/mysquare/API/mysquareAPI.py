@@ -16,6 +16,7 @@ from firebase_admin import auth, credentials, initialize_app
 import firebase_admin
 ##TODO mettere un limite alle chiamate giornaliere nella versione premium e in quella normale (evitare l'abuso in caso di attacco)
 #TODO sobstitute {error} with HTTPEXCEPTION
+#TODO use multimodal embedder for premium and other calls.
 app = FastAPI()
 handler = Mangum(app)
 
@@ -26,15 +27,17 @@ async def getPeople(prompt: str = Query(None, description="prompt for searching 
     #substitute with key analizer
     analyzer = ApiKeyManager(apiKey=apikey)
     if(not analyzer.isKeyValid()):
-        return json.encoder.JSONEncoder().encode(
-            {
-                "error": "Api key Invalid",
-            }
-        )
-    client = weaviate.connect_to_local()  # Connect with default parameters
-    if(not client.is_ready()):
-        return str({"error":"error server response"})
+        raise HTTPException(401, detail="Error key not valid")
     load_dotenv()
+    # Set these environment variables
+    URL = os.getenv("WCS_URL")
+    APIKEY = os.getenv("WCS_API_KEY")
+    # Connect to a WCS instance
+    client = weaviate.connect_to_wcs(
+        cluster_url=URL,
+        auth_credentials=weaviate.auth.AuthApiKey(APIKEY))
+    if(not client.is_ready()):
+        raise HTTPException(500, detail="Internal error")
     genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
     llm = genai.GenerativeModel(model_name="models/gemini-1.5-pro")
     genai.GenerationConfig(max_output_tokens=1000, response_mime_type="application/json") #change with apikey setter, new class called configmodel
@@ -48,11 +51,14 @@ async def getPeople(prompt: str = Query(None, description="prompt for searching 
             content=botJSON["optimizedPrompt"], 
         )["embedding"]
         collection = client.collections.get("users")
-        vector_response = collection.query.near_vector(
-            near_vector=vector, # your query vector goes here
+        vector_response = collection.query.hybrid(
+            alpha=0.25,
+            query=botJSON["optimizedPrompt"],
+            vector=vector, # your query vector goes here
             limit=6, #include and delete the user itself
-            return_metadata= MetadataQuery(distance=True,score=True,certainty=True)
+            return_metadata= MetadataQuery(distance=True,score=True,certainty=True),
         )
+        #TODO update history here
         return json.encoder.JSONEncoder().encode(
             {   #TODO add user id (from firebase id documents)
                 "users":str([
@@ -72,41 +78,37 @@ async def getPeople(prompt: str = Query(None, description="prompt for searching 
                 "bot_response": botJSON,
             }
         )
-    return json.encoder.JSONEncoder().encode(
-            {
-                "users":"null",
-                "error": "content blocked, reason: prompt contains content filtered",
-                "bot_response": botJSON
-            }
-        )
+    raise HTTPException(401, detail="prompt filtered")
     
     
     
 @app.post("/delete_user/")
-async def delete_user(uuid:str=Query(None), apiKey:str=Query(None), secret_id:str= Query(None)):
-    analyzer = ApiKeyManager(apiKey=apiKey, secret_id=secret_id)
+async def delete_user(uuid:str=Query(None), apiKey:str=Query(None)):
+    analyzer = ApiKeyManager(apiKey=apiKey)
     if(not analyzer.isKeyValid()):
-        return json.encoder.JSONEncoder().encode(
-                {
-                    "error": "Api Key invalid",
-                }
-            )
-    client = weaviate.connect_to_local()  # Connect with default parameters
+        raise HTTPException(401, detail="Error key not valid")
+    # Set these environment variables
+    URL = os.getenv("WCS_URL")
+    APIKEY = os.getenv("WCS_API_KEY")
+    # Connect to a WCS instance
+    client = weaviate.connect_to_wcs(
+        cluster_url=URL,
+        auth_credentials=weaviate.auth.AuthApiKey(APIKEY))
     if(not client.is_ready()):
-        return str({"error":"error server response"})
+        raise HTTPException(500, detail="Internal server error")
     collection = client.collections.get("users")
     success = collection.data.delete_by_id(uuid)
     if(success):
-        result = {"error":"null", "SUCCESS":"true", "sad": "false :)"}
+        result = {"error":"null", "SUCCESS":True, "sad": "false :)"} #wtf TODO delete
     else:
-        result = {"error":"error deleting reference id", "SUCCESS": "false", "sad":"true :("}
+        raise HTTPException(500, detail="Internal server error")
     return json.encoder.JSONEncoder().encode(result)
     
 
 
 
 @app.post("/upload_user/") #TODO this will be implemented in the client and then it will be invoked ONLY if the user has done the authentication
-async def upload_user(name:str = Query(None), description:str = Query(None), email:str = Query(None)): #Manage in secret manager
+async def upload_user(name:str = Query(None), description:str = Query(None), email:str = Query(None), password:str = Query(None)): #Manage in secret manager
     firebase_help = firebase_helper()
     ##########TODO manage errors better
     try:
@@ -115,11 +117,19 @@ async def upload_user(name:str = Query(None), description:str = Query(None), ema
         encryptedKey = keyManager.encryptedKey()
         firebase_help.upload_firstKey(email=email, apiKey=encryptedKey) #TODO uncomment
     except:
-        return ({"error":"error authentication user key"})
-    client = await weaviate.connect_to_local()  # Connect with default parameters
-    if(not client.is_ready()):
-        return str({"error":"error server response"})
+        raise HTTPException(401, detail="Error key not valid")
+    #TODO verify user email password here:
+    
     load_dotenv()
+    # Set these environment variables
+    URL = os.getenv("WCS_URL")
+    APIKEY = os.getenv("WCS_API_KEY")
+    # Connect to a WCS instance
+    client = weaviate.connect_to_wcs(
+        cluster_url=URL,
+        auth_credentials=weaviate.auth.AuthApiKey(APIKEY))
+    if(not client.is_ready()):
+        raise HTTPException(500, detail="Internal server error")
     genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
     embedder = genai.get_model("models/text-embedding-004")
     vector = genai.embed_content(
@@ -144,18 +154,15 @@ async def upload_user(name:str = Query(None), description:str = Query(None), ema
         firebase_help.upload_user(email=email, uuid=uuid, apiKey_encrypted=encryptedKey)
         return json.encoder.JSONEncoder().encode(
             {
-                "SUCCESS": "request successful",
+                "SUCCESS": True,
                 "vector": str(vector[0:10])+"...",
-                "apiKey": apiKey, #TODO ADD LOGIN SECURE FUNCTION, add client apikeyloginRetrievalError and local store
+                "apiKey": apiKey, #TODO ADD LOGIN SECURE FUNCTION, add client apikeyloginRetrievalError and local store 
+                #TODO delete apikey returnfor security reason (obv motherfucker)
                 "uuid":uuid
             }
         )
     except:
-        return json.encoder.JSONEncoder().encode(
-            {
-                "error": "error uploading user",
-            }
-        )
+        raise HTTPException(500, detail="internal server error")
     # return json.encoder.JSONEncoder().encode(
     #             {
     #                 "error": "content blocked, reason: prompt contains content filtered",
@@ -164,26 +171,50 @@ async def upload_user(name:str = Query(None), description:str = Query(None), ema
     #             }
     #         )
 @app.get("/get_user/")
-async def get_user(id:str = Query(None), apiKey:str = Query(None), secret_id:str = Query(None)):
+async def get_user(id:str = Query(None), apiKey:str = Query(None)):
     analyzer = ApiKeyManager(apiKey=apiKey)
     if(not analyzer.isKeyValid()):
-        return json.encoder.JSONEncoder().encode(
-                {
-                    "error": "Api Key invalid",
-                }
-            )
+        raise HTTPException(401, detail="api key invalid")
     client = weaviate.connect_to_local()
     collection = client.collections.get("users")
-    user_data = collection.query.fetch_object_by_id(id)
+    try:
+        user_data = collection.query.fetch_object_by_id(id)
+    except:
+        raise HTTPException(404, detail="user not found")
     return json.encoder.JSONEncoder().encode(
                 {   
                     "propreties": user_data.properties,
                 }
             )
         
+class UserData(BaseModel):
+    description: str
+    interests: list[str]
+    
 @app.post("/update_user/")
-async def update_user(id:str = Query(), apiKey:str = Query(), data:str = Query()):
-    pass
+async def update_user(data:UserData, id:str = Query(), apiKey:str = Query()):
+    firebase = firebase_helper()
+    #TODO here firebase updating
+    #TODO here weaviate.insert updating
+    load_dotenv()
+    
+    # Set these environment variables
+    URL = os.getenv("WCS_URL")
+    APIKEY = os.getenv("WCS_API_KEY")
+    # Connect to a WCS instance
+    try:
+        client = weaviate.connect_to_wcs(
+            cluster_url=URL,
+            auth_credentials=weaviate.auth.AuthApiKey(APIKEY))
+    except:
+        HTTPException(500, detail="Internal server error")
+    wcs_doc = client.collections.get("users").data.update( #TODO check null or empty paramethers in data
+        uuid=id,
+        properties={
+                
+        }
+    )
+    
 
 @app.post("/update_interests/")
 async def update_interests(id:str = Query(), apiKey:str = Query(), interests:list = Query()):
@@ -211,7 +242,7 @@ class UserCredentials(BaseModel):
     password: str
 
 # Endpoint to verify user credentials
-@app.post("/verify_user/")
+@app.get("/verify_user/")
 async def verify_user_credentials(credentials: UserCredentials):
     try:
         # Verify user credentials using Firebase Authentication
@@ -222,7 +253,7 @@ async def verify_user_credentials(credentials: UserCredentials):
         auth.verify_password(credentials.email, credentials.password)
         
         # If no exception is thrown, credentials are valid
-        return {"message": "Credentials verified successfully"}
+        return {"message": "Credentials verified successfully", "status": True}
     
     except auth.AuthError as e:
         # Handle authentication errors (e.g., invalid credentials)

@@ -14,17 +14,22 @@ class ApiKeyManager():
     def __init__(self, apiKey):#add project_id and secret_id
         self.apiKey = apiKey
     def isKeyValid(self):
-        self.apiKey
+        firebase_helper = firebase_helper()
+        #TODO check on apikeys
         return True
     def uploadKey(self, email):
         firebase_helper().upload_firstKey(email=email, apiKey=self.apiKey)
     def encryptedKey(self)->str:
         load_dotenv()
-        secret_id = os.getenv("APIS_ENCRYPTION_KEY")
-        payload = SecretManagerService_Helper().access_secret_version()
-        fernet = Fernet(key=payload.encode())
+        key = os.getenv("APIS_ENCRYPTION_KEY")
+        fernet = Fernet(key=key.encode())
         encryptedKey = fernet.encrypt(self.apiKey)
         return encryptedKey.decode()
+    def decryptKey(self):
+        load_dotenv()
+        key = os.getenv("APIS_ENCRYPTION_KEY")
+        fernet = Fernet(key=key.encode())
+        return fernet.decrypt(self.apiKey).decode()
     def get(self):
         return self.apiKey
     
