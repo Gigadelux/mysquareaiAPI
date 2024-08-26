@@ -14,6 +14,7 @@ from weaviate.classes.query import MetadataQuery
 from helpers.firebase_helper import firebase_helper
 from firebase_admin import auth, credentials, initialize_app
 import firebase_admin
+import numpy as np
 ##TODO mettere un limite alle chiamate giornaliere nella versione premium e in quella normale (evitare l'abuso in caso di attacco)
 #TODO sobstitute {error} with HTTPEXCEPTION
 #TODO use multimodal embedder for premium and other calls.
@@ -31,11 +32,11 @@ async def getPeople(prompt: str = Query(None, description="prompt for searching 
     load_dotenv()
     # Set these environment variables
     URL = os.getenv("WCS_URL")
-    APIKEY = os.getenv("WCS_API_KEY")
+    WCSAPIKEY = os.getenv("WCS_API_KEY")
     # Connect to a WCS instance
     client = weaviate.connect_to_wcs(
         cluster_url=URL,
-        auth_credentials=weaviate.auth.AuthApiKey(APIKEY))
+        auth_credentials=weaviate.auth.AuthApiKey(WCSAPIKEY))
     if(not client.is_ready()):
         raise HTTPException(500, detail="Internal error")
     genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
@@ -89,11 +90,11 @@ async def delete_user(uuid:str=Query(None), apiKey:str=Query(None)):
         raise HTTPException(401, detail="Error key not valid")
     # Set these environment variables
     URL = os.getenv("WCS_URL")
-    APIKEY = os.getenv("WCS_API_KEY")
+    WCSAPIKEY = os.getenv("WCS_API_KEY")
     # Connect to a WCS instance
     client = weaviate.connect_to_wcs(
         cluster_url=URL,
-        auth_credentials=weaviate.auth.AuthApiKey(APIKEY))
+        auth_credentials=weaviate.auth.AuthApiKey(WCSAPIKEY))
     if(not client.is_ready()):
         raise HTTPException(500, detail="Internal server error")
     collection = client.collections.get("users")
@@ -108,7 +109,7 @@ async def delete_user(uuid:str=Query(None), apiKey:str=Query(None)):
 
 
 @app.post("/upload_user/") #TODO this will be implemented in the client and then it will be invoked ONLY if the user has done the authentication
-async def upload_user(name:str = Query(None), description:str = Query(None), email:str = Query(None), password:str = Query(None)): #Manage in secret manager
+async def upload_user(name:str = Query(None), description:str = Query(None), email:str = Query(None)): # password:str = Query(None) Manage in secret manager
     firebase_help = firebase_helper()
     ##########TODO manage errors better
     try:
@@ -123,11 +124,11 @@ async def upload_user(name:str = Query(None), description:str = Query(None), ema
     load_dotenv()
     # Set these environment variables
     URL = os.getenv("WCS_URL")
-    APIKEY = os.getenv("WCS_API_KEY")
+    WCSAPIKEY = os.getenv("WCS_API_KEY")
     # Connect to a WCS instance
     client = weaviate.connect_to_wcs(
         cluster_url=URL,
-        auth_credentials=weaviate.auth.AuthApiKey(APIKEY))
+        auth_credentials=weaviate.auth.AuthApiKey(WCSAPIKEY))
     if(not client.is_ready()):
         raise HTTPException(500, detail="Internal server error")
     genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
@@ -178,11 +179,14 @@ async def get_user(id:str = Query(None), apiKey:str = Query(None)):
     load_dotenv()
     # Set these environment variables
     URL = os.getenv("WCS_URL")
-    APIKEY = os.getenv("WCS_API_KEY")
+    WCSAPIKEY = os.getenv("WCS_API_KEY")
     # Connect to a WCS instance
-    client = weaviate.connect_to_wcs(
-        cluster_url=URL,
-        auth_credentials=weaviate.auth.AuthApiKey(APIKEY))
+    try:
+        client = weaviate.connect_to_wcs(
+            cluster_url=URL,
+            auth_credentials=weaviate.auth.AuthApiKey(WCSAPIKEY))
+    except:
+        HTTPException(500, detail="Internal server error")
     collection = client.collections.get("users")
     try:
         user_data = collection.query.fetch_object_by_id(id)
@@ -194,46 +198,96 @@ async def get_user(id:str = Query(None), apiKey:str = Query(None)):
                 }
             )
         
-class UserData(BaseModel):
-    description: str
-    interests: list[str]
     
 @app.post("/update_user/")
-async def update_user(data:UserData, id:str = Query(), apiKey:str = Query()):
+async def update_user(id:str = Query(), apiKey:str = Query(), description:str = Query()):
     firebase = firebase_helper()
     #TODO here firebase updating
     #TODO here weaviate.insert updating
+    analyzer = ApiKeyManager(apiKey=apiKey)
+    if(not analyzer.isKeyValid()):
+        raise HTTPException(401, detail="api key invalid")
     load_dotenv()
-    
     # Set these environment variables
     URL = os.getenv("WCS_URL")
-    APIKEY = os.getenv("WCS_API_KEY")
+    WCSAPIKEY = os.getenv("WCS_API_KEY")
     # Connect to a WCS instance
     try:
         client = weaviate.connect_to_wcs(
             cluster_url=URL,
-            auth_credentials=weaviate.auth.AuthApiKey(APIKEY))
+            auth_credentials=weaviate.auth.AuthApiKey(WCSAPIKEY))
     except:
         HTTPException(500, detail="Internal server error")
-    wcs_doc = client.collections.get("users").data.update( #TODO check null or empty paramethers in data
-        uuid=id,
-        properties={
-                
-        }
-    )
-    
+    if(len(description)!=0):
+        wcs_doc = client.collections.get("users").data.update( #TODO check null or empty paramethers in data
+            uuid=id,
+            properties={
+                "description":description,
+            }
+        )
+        return {"id": id,"updating_status":200}
+    else:
+        raise HTTPException(406, detail="argument description is empty")
 
 @app.post("/update_interests/")
 async def update_interests(id:str = Query(), apiKey:str = Query(), interests:list = Query()):
-    pass
+    firebase = firebase_helper()
+    #TODO here firebase updating
+    #TODO here weaviate.insert updating
+    analyzer = ApiKeyManager(apiKey=apiKey)
+    if(not analyzer.isKeyValid()):
+        raise HTTPException(401, detail="api key invalid")
+    load_dotenv()
+    # Set these environment variables
+    URL = os.getenv("WCS_URL")
+    WCSAPIKEY = os.getenv("WCS_API_KEY")
+    # Connect to a WCS instance
+    try:
+        client = weaviate.connect_to_wcs(
+            cluster_url=URL,
+            auth_credentials=weaviate.auth.AuthApiKey(WCSAPIKEY))
+    except:
+        HTTPException(500, detail="Internal server error")
+    collection = client.collections.get("users")
+    try:
+        user_data = collection.query.fetch_object_by_id(id)
+    except:
+        raise HTTPException(404, detail="user not found")
+    oldInterests = user_data.properties.get()
+    def differences(l1, l2):
+        added = []
+        subtracted = []
+        for i in l1:
+            if(not l2.contains(i)):
+                subtracted.append(i)
+        for j in l2:
+            if(not l1.contains(i)):
+                added.append(j)
+        return {"added": added, "subtracted": subtracted}
+    diff = differences(oldInterests, interests)
+    genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+    embedder = genai.get_model("models/text-embedding-004")
+    vectorAdded = genai.embed_content(
+        model=embedder,
+        content=str(diff["added"]), 
+    )["embedding"]
+    vectorSubtracted = genai.embed_content(
+        model=embedder,
+        content=str(diff["subtracted"]), 
+    )["embedding"]
+    vAdd = np.array(vectorAdded)
+    vSub = np.array(vectorSubtracted)
+    oldVec = np.array(user_data.vector["default"])
+    newVec = oldVec + vAdd - vSub
+    collection.data.update(
+        uuid=id,
+        vector= newVec.tolist()
+    )
+    return {"id": id,"updating_status":200}
 
 @app.get("/test/")
 async def test(name:str = Query(None)):
-    return json.encoder.JSONEncoder().encode(
-                {
-                    "Greetings": "Hello my man!! Hello "+name,
-                }
-            )
+    return {"Greetings": "Hello my man!! Hello "+name}
 
 #FIREBASE TODO more fuckin elegant!!!!!! NOT MONOLITIC ECHECAZZO
 '''
