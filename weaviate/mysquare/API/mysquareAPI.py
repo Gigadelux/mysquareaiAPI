@@ -253,37 +253,53 @@ async def update_interests(id:str = Query(), apiKey:str = Query(), interests:lis
         user_data = collection.query.fetch_object_by_id(id)
     except:
         raise HTTPException(404, detail="user not found")
-    oldInterests = user_data.properties.get()
-    def differences(l1, l2):
-        added = []
-        subtracted = []
-        for i in l1:
-            if(not l2.contains(i)):
-                subtracted.append(i)
-        for j in l2:
-            if(not l1.contains(i)):
-                added.append(j)
-        return {"added": added, "subtracted": subtracted}
-    diff = differences(oldInterests, interests)
-    genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-    embedder = genai.get_model("models/text-embedding-004")
-    vectorAdded = genai.embed_content(
-        model=embedder,
-        content=str(diff["added"]), 
-    )["embedding"]
-    vectorSubtracted = genai.embed_content(
-        model=embedder,
-        content=str(diff["subtracted"]), 
-    )["embedding"]
-    vAdd = np.array(vectorAdded)
-    vSub = np.array(vectorSubtracted)
-    oldVec = np.array(user_data.vector["default"])
-    newVec = oldVec + vAdd - vSub
-    collection.data.update(
-        uuid=id,
-        vector= newVec.tolist()
-    )
-    return {"id": id,"updating_status":200}
+    oldInterests = user_data.properties["interests"]
+    if(len(oldInterests)!=0):
+        def differences(l1, l2): #TODO maybe is better to add the new interests vector alone?
+            added = []
+            subtracted = []
+            for i in l1:
+                if(not l2.contains(i)):
+                    subtracted.append(i)
+            for j in l2:
+                if(not l1.contains(i)):
+                    added.append(j)
+            return {"added": added, "subtracted": subtracted}
+        diff = differences(oldInterests, interests)
+        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+        embedder = genai.get_model("models/text-embedding-004")
+        vectorAdded = genai.embed_content(
+            model=embedder,
+            content=str(diff["added"]), 
+        )["embedding"]
+        vectorSubtracted = genai.embed_content(
+            model=embedder,
+            content=str(diff["subtracted"]), 
+        )["embedding"]
+        vAdd = np.array(vectorAdded)
+        vSub = np.array(vectorSubtracted)
+        oldVec = np.array(user_data.vector["default"])
+        newVec = oldVec + vAdd - vSub
+        collection.data.update(
+            uuid=id,
+            vector= newVec.tolist()
+        )
+        return {"id": id,"updating_status":200}
+    else:
+        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+        embedder = genai.get_model("models/text-embedding-004")
+        vectorAdded = genai.embed_content(
+            model=embedder,
+            content=str(interests), 
+        )["embedding"]
+        vAdd = np.array(vectorAdded)
+        oldVec = np.array(user_data.vector["default"])
+        newVec = oldVec + vAdd
+        collection.data.update(
+            uuid=id,
+            vector= newVec.tolist()
+        )
+        return {"id": id,"updating_status":200}
 
 @app.get("/test/")
 async def test(name:str = Query(None)):
