@@ -175,7 +175,14 @@ async def get_user(id:str = Query(None), apiKey:str = Query(None)):
     analyzer = ApiKeyManager(apiKey=apiKey)
     if(not analyzer.isKeyValid()):
         raise HTTPException(401, detail="api key invalid")
-    client = weaviate.connect_to_local()
+    load_dotenv()
+    # Set these environment variables
+    URL = os.getenv("WCS_URL")
+    APIKEY = os.getenv("WCS_API_KEY")
+    # Connect to a WCS instance
+    client = weaviate.connect_to_wcs(
+        cluster_url=URL,
+        auth_credentials=weaviate.auth.AuthApiKey(APIKEY))
     collection = client.collections.get("users")
     try:
         user_data = collection.query.fetch_object_by_id(id)
