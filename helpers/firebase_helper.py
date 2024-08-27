@@ -8,7 +8,7 @@ import json
 class firebase_helper():#TODO make a function that checks if the uuid of user is not null for login function in the api in case of errors
     def __init__(self):
         load_dotenv()
-        service_account_key = json.loads(os.getenv("GOOGLE_ADMIN_CREDENTIALS"))
+        service_account_key = json.decoder.JSONDecoder().decode(os.getenv("GOOGLE_ADMIN_CREDENTIALS"))
         cred = credentials.Certificate(service_account_key)
         print(cred)
         firebase_admin.initialize_app(cred)
