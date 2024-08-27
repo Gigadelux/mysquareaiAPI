@@ -1,14 +1,14 @@
 from google.cloud import firestore
-from firebase_admin import auth
+import firebase_admin
+from firebase_admin import credentials,auth
 
 
 class firebase_helper():#TODO make a function that checks if the uuid of user is not null for login function in the api in case of errors
     def __init__(self):
-        self.db = firestore.Client(
-            project=None,
-            credentials=None,
-            database=None
-        )
+        service_account_key = "mysquareai-de163-firebase-adminsdk-uy13o-6afe8d3911.json"
+        cred = credentials.Certificate(service_account_key)
+        firebase_admin.initialize_app(cred)
+        self.db = firestore.Client()
     def docExist(self, docCollection,docName:str): #todo sono ubriaco da rifare
         try:
             

@@ -120,7 +120,10 @@ async def upload_user(name:str = Query(None), description:str = Query(None), ema
     except:
         raise HTTPException(401, detail="Error key not valid")
     #TODO verify user email password here:
-    
+    try:
+        firebase_help.check_user_exists(email=email)
+    except:
+        raise HTTPException(401, detail="User need to login first")
     load_dotenv()
     # Set these environment variables
     URL = os.getenv("WCS_URL")
@@ -201,7 +204,7 @@ async def get_user(id:str = Query(None), apiKey:str = Query(None)):
     
 @app.post("/update_user/")
 async def update_user(id:str = Query(), apiKey:str = Query(), description:str = Query()):
-    firebase = firebase_helper()
+    #firebase = firebase_helper()
     #TODO here firebase updating
     #TODO here weaviate.insert updating
     analyzer = ApiKeyManager(apiKey=apiKey)
@@ -231,7 +234,7 @@ async def update_user(id:str = Query(), apiKey:str = Query(), description:str = 
 
 @app.post("/update_interests/")
 async def update_interests(id:str = Query(), apiKey:str = Query(), interests:list = Query()):
-    firebase = firebase_helper()
+    #firebase = firebase_helper()
     #TODO here firebase updating
     #TODO here weaviate.insert updating
     analyzer = ApiKeyManager(apiKey=apiKey)
@@ -303,7 +306,10 @@ async def update_interests(id:str = Query(), apiKey:str = Query(), interests:lis
 
 @app.get("/test/")
 async def test(name:str = Query(None)):
-    return {"Greetings": "Hello my man!! Hello "+name}
+    try:
+        return {"Greetings": "Hello my man!! Hello "+name}
+    except:
+        return {"Greetings":"I'm so sad you did not tell me ur name"}
 
 #FIREBASE TODO more fuckin elegant!!!!!! NOT MONOLITIC ECHECAZZO
 '''
