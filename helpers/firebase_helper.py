@@ -1,11 +1,13 @@
 from google.cloud import firestore
 import firebase_admin
 from firebase_admin import credentials,auth
-
+import os
+from dotenv import load_dotenv
 
 class firebase_helper():#TODO make a function that checks if the uuid of user is not null for login function in the api in case of errors
     def __init__(self):
-        service_account_key = "/etc/secrets/mysquareai-de163-firebase-adminsdk-uy13o-6afe8d3911.json"
+        load_dotenv()
+        service_account_key = os.getenv("GOOGLE_ADMIN_CREDENTIALS")
         cred = credentials.Certificate(service_account_key)
         firebase_admin.initialize_app(cred)
         self.db = firestore.Client()
