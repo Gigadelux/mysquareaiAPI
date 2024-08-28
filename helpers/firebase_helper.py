@@ -44,7 +44,7 @@ class firebase_helper():#TODO make a function that checks if the uuid of user is
         except Exception as e:
             return False  # Other errors
     def upload_user(self, email, uuid, name, apiKey_encrypted): #TODO users sign up starts here
-        self.db.collection("users").doc(uuid).set({"uuid":uuid,"email":email, "name":name, "apiKey":apiKey_encrypted})
+        self.db.collection("users").document(uuid).set({"uuid":uuid,"email":email, "name":name, "apiKey":apiKey_encrypted})
     def upload_firstKey(self, email, apiKey, decriptionKey):
         self.db.collection("clear_api_keys").add({"user":email, "apiKey":apiKey, "decryptionKey":decriptionKey})
     # def updateHistory(self, prompt:str, id:str): TODO update from client
