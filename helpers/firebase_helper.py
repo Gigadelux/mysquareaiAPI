@@ -12,7 +12,7 @@ class firebase_helper():#TODO make a function that checks if the uuid of user is
         cred = credentials.Certificate(service_account_key)
         print(service_account_key)
         firebase_admin.initialize_app(cred)
-        self.db = firestore.Client()
+        self.db = firestore.Client(credentials=cred)
     def docExist(self, docCollection,docName:str): #todo sono ubriaco da rifare
         try:
             
