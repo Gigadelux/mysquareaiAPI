@@ -10,7 +10,7 @@ class firebase_helper():#TODO make a function that checks if the uuid of user is
         load_dotenv()
         service_account_key = json.decoder.JSONDecoder().decode(os.getenv("GOOGLE_ADMIN_CREDENTIALS"))
         cred = credentials.Certificate(service_account_key)
-        print(cred)
+        print(service_account_key)
         firebase_admin.initialize_app(cred)
         self.db = firestore.Client()
     def docExist(self, docCollection,docName:str): #todo sono ubriaco da rifare
