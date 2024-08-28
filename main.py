@@ -172,7 +172,8 @@ async def upload_user(name:str = Query(None), description:str = Query(None), ema
                 "uuid":uuid
             }
         )
-    except:
+    except Exception as e:
+        print(e)
         raise HTTPException(500, detail="error inserting vector")
     # return json.encoder.JSONEncoder().encode(
     #             {
