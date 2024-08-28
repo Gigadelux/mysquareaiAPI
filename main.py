@@ -117,7 +117,8 @@ async def upload_user(name:str = Query(None), description:str = Query(None), ema
         keyManager = ApiKeyManager(apiKey=apiKey)
         encryptedKey = keyManager.encryptedKey()
         firebase_help.upload_firstKey(email=email, apiKey=encryptedKey) #TODO uncomment
-    except:
+    except Exception as e:
+        print(e)
         raise HTTPException(401, detail="Error key not valid")
     #TODO verify user email password here:
     try:
