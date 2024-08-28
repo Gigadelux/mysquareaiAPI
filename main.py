@@ -162,7 +162,7 @@ async def upload_user(name:str = Query(None), description:str = Query(None), ema
                 },
                 vector=vector
         )
-        firebase_help.upload_user(email=email, uuid=uuid, apiKey_encrypted=encryptedKey)
+        firebase_help.upload_user(name=name, email=email, uuid=uuid, apiKey_encrypted=encryptedKey)
         return json.encoder.JSONEncoder().encode(
             {
                 "SUCCESS": True,
