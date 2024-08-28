@@ -126,14 +126,14 @@ async def upload_user(name:str = Query(None), description:str = Query(None), ema
     #TODO verify user email password here:
     try:
         userFound = firebase_help.check_user_exists(email=email)
-        # if(not userFound):
-        #    raise HTTPException(404) #TODO uncomment after debug
+        if(not userFound):
+           raise HTTPException(404)
     except Exception as e:
         print(str(e))
         raise HTTPException(401, detail="User need to login first")
     userRegistered = firebase_help.user_subscribed(email=email)
-    # if(userRegistered):
-    #    raise HTTPException(401, detail="User already subscribed") #TODO uncomment after debug
+    if(userRegistered):
+       raise HTTPException(401, detail="User already subscribed") 
     load_dotenv()
     # Set these environment variables
     URL = os.getenv("WCS_URL")
