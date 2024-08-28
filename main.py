@@ -172,7 +172,7 @@ async def upload_user(name:str = Query(None), description:str = Query(None), ema
                 "vector": str(vector[0:10])+"...",
                 "apiKey": apiKey, #TODO ADD LOGIN SECURE FUNCTION, add client apikeyloginRetrievalError and local store 
                 #TODO delete apikey returnfor security reason (obv motherfucker)
-                "uuid":uuid
+                "uuid":str(uuid)
             }
         )
     except Exception as e:
