@@ -118,7 +118,7 @@ async def upload_user(name:str = Query(None), description:str = Query(None), ema
         keyManager = ApiKeyManager(apiKey=apiKey)
         deckey = Fernet.generate_key()
         text_deckey = deckey.decode()
-        encryptedKey = keyManager.encryptedKey(apiKey,text_deckey)
+        encryptedKey = keyManager.encryptedKey(text_deckey)
         firebase_help.upload_firstKey(email=email, apiKey=encryptedKey, decriptionKey=text_deckey) #TODO uncomment
     except Exception as e:
         print(e)
