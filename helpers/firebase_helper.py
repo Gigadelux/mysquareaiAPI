@@ -27,7 +27,13 @@ class firebase_helper():#TODO make a function that checks if the uuid of user is
             print(e) #TODO remove after debug
             return False
         
-
+    def user_subscribed(self,email:str)->bool:
+        doc_ref = self.db.collection("users").where(field_path="email", op_string="==", value=email).limit(1).get()
+        if doc_ref:
+            return True  # Document exists
+        else:
+            return False  # Document does not exist
+        
     def check_user_exists(self, email):
         try:
             # Get user by email
@@ -38,7 +44,7 @@ class firebase_helper():#TODO make a function that checks if the uuid of user is
         except Exception as e:
             return False  # Other errors
     def upload_user(self, email, uuid, name, apiKey_encrypted): #TODO users sign up starts here
-        self.db.collection("users").add({"uuid":uuid,"email":email, "name":name, "apiKey":apiKey_encrypted})
+        self.db.collection("users").doc(uuid).set({"uuid":uuid,"email":email, "name":name, "apiKey":apiKey_encrypted})
     def upload_firstKey(self, email, apiKey, decriptionKey):
         self.db.collection("clear_api_keys").add({"user":email, "apiKey":apiKey, "decryptionKey":decriptionKey})
     # def updateHistory(self, prompt:str, id:str): TODO update from client

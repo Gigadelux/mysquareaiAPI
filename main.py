@@ -131,6 +131,9 @@ async def upload_user(name:str = Query(None), description:str = Query(None), ema
     except Exception as e:
         print(str(e))
         raise HTTPException(401, detail="User need to login first")
+    userRegistered = firebase_help.user_subscribed(email=email)
+    # if(userRegistered):
+    #    raise HTTPException(401, detail="User already subscribed") #TODO uncomment after debug
     load_dotenv()
     # Set these environment variables
     URL = os.getenv("WCS_URL")
@@ -162,7 +165,7 @@ async def upload_user(name:str = Query(None), description:str = Query(None), ema
                 },
                 vector=vector
         )
-        firebase_help.upload_user(name=name, email=email, uuid=uuid, apiKey_encrypted=encryptedKey)
+        firebase_help.upload_user(name=name, email=email, uuid=str(uuid), apiKey_encrypted=encryptedKey)
         return json.encoder.JSONEncoder().encode(
             {
                 "SUCCESS": True,
