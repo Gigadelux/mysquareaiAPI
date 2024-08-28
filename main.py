@@ -126,8 +126,8 @@ async def upload_user(name:str = Query(None), description:str = Query(None), ema
     #TODO verify user email password here:
     try:
         userFound = firebase_help.check_user_exists(email=email)
-        if(not userFound):
-           raise HTTPException(404)
+        # if(not userFound):
+        #    raise HTTPException(404) #TODO uncomment after debug
     except Exception as e:
         print(str(e))
         raise HTTPException(401, detail="User need to login first")
