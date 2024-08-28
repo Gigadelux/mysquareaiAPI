@@ -39,10 +39,10 @@ class firebase_helper():#TODO make a function that checks if the uuid of user is
             return False  # Other errors
     def upload_user(self, email, uuid, name, apiKey_encrypted): #TODO users sign up starts here
         self.db.collection("users").add({"uuid":uuid,"email":email, "name":name, "apiKey":apiKey_encrypted})
-    def upload_firstKey(self, email, apiKey):
-        self.db.collection("clear_api_keys").add({"user":email, "apiKey":apiKey})
-    def updateHistory(self, prompt:str, id:str):
-        self.db.collection("users").document(id).collection("history").add({"prompt":prompt, "dateTime": firestore.SERVER_TIMESTAMP})
+    def upload_firstKey(self, email, apiKey, decriptionKey):
+        self.db.collection("clear_api_keys").add({"user":email, "apiKey":apiKey, "decryptionKey":decriptionKey})
+    # def updateHistory(self, prompt:str, id:str): TODO update from client
+    #     self.db.collection("users").document(id).collection("history").add({"prompt":prompt, "dateTime": .SERVER_TIMESTAMP})
 
 '''
     RULES/BOZZA:

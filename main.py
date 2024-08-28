@@ -15,6 +15,7 @@ from helpers.firebase_helper import firebase_helper
 from firebase_admin import auth, credentials, initialize_app
 import firebase_admin
 import numpy as np
+from cryptography.fernet import Fernet
 ##TODO mettere un limite alle chiamate giornaliere nella versione premium e in quella normale (evitare l'abuso in caso di attacco)
 #TODO sobstitute {error} with HTTPEXCEPTION
 #TODO use multimodal embedder for premium and other calls.
@@ -115,8 +116,10 @@ async def upload_user(name:str = Query(None), description:str = Query(None), ema
     try:
         apiKey = generateApiKey()
         keyManager = ApiKeyManager(apiKey=apiKey)
-        encryptedKey = keyManager.encryptedKey()
-        firebase_help.upload_firstKey(email=email, apiKey=encryptedKey) #TODO uncomment
+        deckey = Fernet.generate_key()
+        text_deckey = deckey.decode()
+        encryptedKey = keyManager.encryptedKey(apiKey,text_deckey)
+        firebase_help.upload_firstKey(email=email, apiKey=encryptedKey, decriptionKey=text_deckey) #TODO uncomment
     except Exception as e:
         print(e)
         raise HTTPException(401, detail="Error key not valid")

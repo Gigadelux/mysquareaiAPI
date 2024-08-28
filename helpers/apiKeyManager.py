@@ -1,13 +1,13 @@
-from google.cloud.secretmanager import *
+import base64
 from google.auth import credentials
 from dotenv import load_dotenv
 import os
 import time
 import random
 import string
-from helpers.secretManagerService_helper import SecretManagerService_Helper
 from helpers.firebase_helper import firebase_helper
 from cryptography.fernet import Fernet
+import hashlib
 '''!IMPORTANT to manage the keys and verify them I will put only the encryption key in the secretManager, and it will change from user email'''
 class ApiKeyManager():
     apiKey = ""
@@ -19,11 +19,13 @@ class ApiKeyManager():
         return True
     def uploadKey(self, email):
         firebase_helper().upload_firstKey(email=email, apiKey=self.apiKey)
-    def encryptedKey(self)->str:
-        load_dotenv()
-        key = os.getenv("APIS_ENCRYPTION_KEY")
-        fernet = Fernet(key=key.encode())
-        encryptedKey = fernet.encrypt(self.apiKey)
+    def encryptedKey(self, key_str)->str:
+        hashed_key = hashlib.sha256(key_str.encode()).digest()
+        # 2. Encode the hashed key to base64 to meet Fernet's key requirements
+        key = base64.urlsafe_b64encode(hashed_key[:32])
+        fernet = Fernet(key=key)
+        encryptedKey = fernet.encrypt(self.apiKey.encode())
+        print(encryptedKey.decode())
         return encryptedKey.decode()
     def decryptKey(self):
         load_dotenv()
