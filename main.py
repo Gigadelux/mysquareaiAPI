@@ -119,13 +119,15 @@ async def upload_user(name:str = Query(None), description:str = Query(None), ema
         deckey = Fernet.generate_key()
         text_deckey = deckey.decode()
         encryptedKey = keyManager.encryptedKey(text_deckey)
-        firebase_help.upload_firstKey(email=email, apiKey=encryptedKey, decriptionKey=text_deckey) #TODO uncomment
+        firebase_help.upload_firstKey(email=email, apiKey=apiKey, decriptionKey=text_deckey) #TODO uncomment
     except Exception as e:
         print(e)
         raise HTTPException(401, detail="Error key not valid")
     #TODO verify user email password here:
     try:
-        firebase_help.check_user_exists(email=email)
+        userFound = firebase_help.check_user_exists(email=email)
+        if(not userFound):
+           raise HTTPException(404)
     except Exception as e:
         print(str(e))
         raise HTTPException(401, detail="User need to login first")
@@ -138,7 +140,7 @@ async def upload_user(name:str = Query(None), description:str = Query(None), ema
         cluster_url=URL,
         auth_credentials=weaviate.auth.AuthApiKey(WCSAPIKEY))
     if(not client.is_ready()):
-        raise HTTPException(500, detail="Internal server error")
+        raise HTTPException(500, detail="Weaviate not initialized")
     genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
     embedder = genai.get_model("models/text-embedding-004")
     vector = genai.embed_content(
@@ -171,7 +173,7 @@ async def upload_user(name:str = Query(None), description:str = Query(None), ema
             }
         )
     except:
-        raise HTTPException(500, detail="internal server error")
+        raise HTTPException(500, detail="error inserting vector")
     # return json.encoder.JSONEncoder().encode(
     #             {
     #                 "error": "content blocked, reason: prompt contains content filtered",
